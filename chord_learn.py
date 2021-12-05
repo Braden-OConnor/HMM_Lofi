@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Dec  4 19:04:22 2021
+Created on Sun Dec  5 15:41:14 2021
 
 @author: oconn
 """
@@ -15,44 +15,47 @@ import pickle
 from hmmlearn import hmm
 import datetime
 
-
-def plot_piano_roll(pm, start_pitch, end_pitch, fs=100):
+def plot_piano_roll(pm, start_pitch, end_pitch, fs=2):
     # Use librosa's specshow function for displaying the piano roll
     librosa.display.specshow(pm.get_piano_roll(fs)[start_pitch:end_pitch],
                              hop_length=1, sr=fs, x_axis='time', y_axis='cqt_note',
                              fmin=pretty_midi.note_number_to_hz(start_pitch))
 
+rolls = []
 
-pm = pretty_midi.PrettyMIDI('LofiPianoSample1.mid')
-
-
-plt.figure(figsize=(8, 4))
-plot_piano_roll(pm = pm, start_pitch = 40, end_pitch = 110)
-
-
-roll = pm.get_piano_roll()
-
-tesrr = pm.get_piano_roll(100)
-
+for i in range(0,5):
+    pm = pretty_midi.PrettyMIDI(str(i+1) + "_clean.mid")
+    #plt.figure(figsize=(8, 4))
+    #plot_piano_roll(pm = pm, start_pitch = 40, end_pitch = 110)
+    rolls.append(pm.get_piano_roll(fs = 2))
+    
 notes = []
 note_lens = []
 
-for i in range(0,len(roll[0])):
-    note_slice = [0,0,0,0,0,0,0,0,0,0]
+    
+for i in range(0,len(rolls)):   
+    current_song = rolls[i]
+   
     size = 0
-    for j in range (0,len(roll)):
-        velocity = roll[j][i]
-        if velocity > 0:
-            note_slice[size] = j
-            size = size + 1
-    notes.append(np.array(note_slice))
-    note_lens.append(10)      
+    for j in range(0,len(current_song[0])):
+        note_slice = [0,0,0,0,0,0,0,0,0,0]
+        size = 0
+        for k in range(0,128):            
+            velocity = current_song[k][j]
+            if velocity > 0:
+                note_slice[size] = k
+                size = size + 1
+        if (size > 0):
+            notes.append(note_slice)
+    #print(i)
+    #print(j+1)
+    note_lens.append(j+1)
     
     
-remodel = hmm.GaussianHMM(n_components=30, covariance_type="diag", n_iter=12, min_covar=0.1) 
-model = remodel.fit(notes) 
+remodel = hmm.GaussianHMM(n_components=3, covariance_type="diag", n_iter=12, min_covar=0.1) 
+model = remodel.fit(notes, note_lens) 
 
-test = model.sample(40,None)
+test = model.sample(20,None)
 
 song = []
 for i in range (0,len(test[0])):
@@ -64,17 +67,9 @@ song_gen = pretty_midi.PrettyMIDI()
 inst = pretty_midi.Instrument(program=0, is_drum=False, name='my piano')
 song_gen.instruments.append(inst)
 
-holder = song
-
-test = []
-test.append(song[0])
-test.append(song[1])
-test.append(song[2])
-
-
-
 for i in range(0,len(song)):
     row = np.unique(song[i])
+    row = np.delete(row,0)
     for j in range(0,len(row)):
        note_len = 1
        curr_pitch = row[j]
@@ -90,10 +85,7 @@ for i in range(0,len(song)):
 #print(inst.notes)
       
 song_gen.instruments.append(inst)
-    
-    
-fs = 16000
-IPython.display.Audio(song_gen.synthesize(fs=16000), rate=16000)
+
 
 header = "test" + str(datetime.datetime.now().day) + str(datetime.datetime.now().minute)+ str(datetime.datetime.now().second) + ".mid"
 song_gen.write(header)
@@ -104,22 +96,7 @@ plt.figure(figsize=(8, 4))
 plot_piano_roll(song_gen, 50, 100)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print(song)
 
 
 
