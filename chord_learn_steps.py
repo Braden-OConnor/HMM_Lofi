@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Dec  5 15:41:14 2021
+Created on Sun Dec  5 20:09:33 2021
 
 @author: oconn
 """
@@ -35,28 +35,36 @@ note_lens = []
     
 for i in range(0,len(rolls)):   
     current_song = rolls[i]
-   
-    size = 0
+    count = 0
     for j in range(0,len(current_song[0])):
-        note_slice = [0,0,0,0,0,0,0,0,0,0]
+        note_slice = [0,0,0]
         size = 0
-        for k in range(0,128):            
-            velocity = current_song[k][j]
-            if velocity > 0:
-                note_slice[size] = k
-                size = size + 1
-        if (size > 0):
+        lim = 3
+        found = 0
+        for k in range(0,128):
+            if (found < lim):       
+                velocity = current_song[k][j]
+                if velocity > 0:
+                    note_slice[size] = k
+                    size = size + 1
+                    found = found + 1
+        if (size > 2):
             notes.append(note_slice)
-    #print(i)
-    #print(j+1)
-    note_lens.append(j+1)
+            count = count + 1
+    note_lens.append(count)
+
+
+steps = []
+for i in range(0,len(notes)):
+    steps.append([notes[i][0], notes[i][1]-notes[i][0], notes[i][2]-notes[i][1]])
     
-    
-remodel = hmm.GaussianHMM(n_components=8, covariance_type="diag", n_iter=12, min_covar=0.1) 
-model = remodel.fit(notes, note_lens) 
+remodel = hmm.GaussianHMM(n_components=9, covariance_type="diag", n_iter=11, min_covar=0.1) 
+model = remodel.fit(steps, note_lens) 
 
 test = model.sample(20,None)
 
+
+holder = []
 song = []
 
 
@@ -64,9 +72,11 @@ song = []
 means = model.means_
 for i in range(0,len(test[1])):
     note = means[test[1][i]]
-    note = np.unique(note.astype(int))
-    note = np.delete(note, 0)
-    song.append(note)
+    holder.append(note)
+
+for i in range(0,len(holder)):
+    song.append([int(holder[i][0]), int(holder[i][0] + holder[i][1]), int(holder[i][0]+ holder[i][1] + holder[i][2])])
+
 
 
 song_gen = pretty_midi.PrettyMIDI()
@@ -93,25 +103,6 @@ plot_piano_roll(song_gen, 50, 100)
 
 header = "test" + str(datetime.datetime.now().day) + str(datetime.datetime.now().minute)+ str(datetime.datetime.now().second) + ".mid"
 song_gen.write(header)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
